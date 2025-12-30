@@ -1,0 +1,22 @@
+# Recurrent model configured to be a competitor to GPT-2.
+# It uses fewer layers (2) but more recurrences (6) to simulate
+# the total computational depth of a standard 12-layer GPT-2 model,
+# while having a similar parameter count.
+name: recurrent_gpt2_comp
+block_size: 1024
+num_recurrences: 6
+n_layer: 2
+n_head: 12
+d_model: 768
+dropout: 0.1
+use_kv_cache: false
+ffn_multiplier: 4.0 # GPT-2 uses 4x FFN multiplier
+rope_theta: 10000.0
+layer_scale_init: 0.0001
+tie_word_embeddings: true
+
+# --- Performance ---
+# Enable liger kernels for better performance on larger models
+use_liger_ff: true
+use_liger_norm: true
+use_liger_rope: true

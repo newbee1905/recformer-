@@ -1,0 +1,17 @@
+name: recurrent-mini
+block_size: 128
+num_recurrences: 2
+n_layer: 2
+n_head: 2
+d_model: 128
+dropout: 0.1
+use_kv_cache: false
+use_gate: false
+use_qk_norm: true
+ffn_multiplier: 4.0
+rope_theta: 10000.0
+layer_scale_init: 0.0001
+tie_word_embeddings: true
+use_liger_ff: false
+use_liger_norm: false
+use_liger_rope: false

@@ -1,0 +1,32 @@
+defaults:
+  - model: recurrent_mini
+  - _self_
+
+# hydra configuration
+hydra:
+  run:
+    dir: outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}
+
+wandb:
+  project: "recurrent_transformer"
+  name: null
+
+model:
+  max_length: ${model.block_size}
+
+training:
+  batch_size: 16
+  num_workers: 2
+  epochs: 30
+  optimizer:
+    lr: 0.0001
+    weight_decay: 0.01
+  logger: "wandb" # "tensorboard" or "wandb"
+  compile: true
+  dtype: "bfloat16" # or "float16" or "float32"
+  grad_accum_steps: 1
+  grad_clip: 1.0
+  early_stopping_patience: 3
+  softcap:
+    enabled: false
+    value: 30.0

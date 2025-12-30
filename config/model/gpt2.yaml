@@ -1,0 +1,20 @@
+# GPT-2 base model configuration (12 layers, 12 heads, 768 d_model).
+# num_recurrences is 1, making it a standard (non-recurrent) transformer.
+name: gpt2
+block_size: 1024
+num_recurrences: 1
+n_layer: 12
+n_head: 12
+d_model: 768
+dropout: 0.1
+use_kv_cache: false
+ffn_multiplier: 4.0 # GPT-2 uses 4x FFN multiplier
+rope_theta: 10000.0
+layer_scale_init: 0.0001
+tie_word_embeddings: true
+
+# --- Performance ---
+# Enable liger kernels for better performance on larger models
+use_liger_ff: true
+use_liger_norm: true
+use_liger_rope: true

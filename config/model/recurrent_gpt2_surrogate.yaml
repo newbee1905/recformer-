@@ -1,0 +1,19 @@
+# Recurrent model configured to match GPT-2's total depth (2 layers * 6 recurrences = 12).
+name: recurrent_gpt2_surrogate
+block_size: 1024
+num_recurrences: 6
+n_layer: 2
+n_head: 12
+d_model: 768
+dropout: 0.1
+use_kv_cache: false
+ffn_multiplier: 4.0 # GPT-2 uses 4x FFN multiplier
+rope_theta: 10000.0
+layer_scale_init: 0.0001
+tie_word_embeddings: true
+
+# --- Performance ---
+# Enable liger kernels for better performance on larger models
+use_liger_ff: true
+use_liger_norm: true
+use_liger_rope: true
