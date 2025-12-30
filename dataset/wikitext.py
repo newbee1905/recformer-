@@ -18,7 +18,7 @@ class WikiTextDataset(Dataset):
 			print("Local path not found, attempting download...")
 			dataset = load_dataset("wikitext", "wikitext-2-raw-v1")
 
-		self.texts = dataset[split]['text']
+		self.texts = dataset[split]["text"]
 		tokenized_texts = [self.tokenizer.encode(text) for text in self.texts if len(text) > 0]
 
 		all_token_ids = [token_id for text in tokenized_texts for token_id in text]

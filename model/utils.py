@@ -1,8 +1,8 @@
 import torch
 import torch.nn as nn
-import numpy as np
+import torch.nn.functional as F
 
-from kernel.rope import TritonRoPEFunction
+TritonRoPEFunction = None
 
 
 class AttributeEncoder(nn.Module):
@@ -54,6 +54,15 @@ def apply_rope(
 	"""
 	Applies the Rotary Positional Embedding (RoPE) to the query and key tensors.
 	"""
+	global TritonRoPEFunction
+	if TritonRoPEFunction is None:
+		try:
+			from kernel.rope import TritonRoPEFunction as _TritonRoPEFunction
+
+			TritonRoPEFunction = _TritonRoPEFunction
+		except ImportError:
+			raise ImportError("Triton is not available for RoPE. Set `use_liger_rope=False` to use torch RoPE.")
+
 	T = q.size(2)
 
 	freqs_cos = freqs_cos[seq_len - T : seq_len].contiguous()

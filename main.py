@@ -57,7 +57,9 @@ def main(cfg: DictConfig):
 	if rank == 0:
 		print(f"Tokenizer loaded with {tokenizer.vocab_size} tokens.")
 
-	train_ds = WikiTextDataset(tokenizer=tokenizer, max_length=cfg.model.max_length, split="train", data_path=cfg.dataset.path)
+	train_ds = WikiTextDataset(
+		tokenizer=tokenizer, max_length=cfg.model.max_length, split="train", data_path=cfg.dataset.path
+	)
 	train_sampler = DistributedSampler(train_ds, num_replicas=world_size, rank=rank, shuffle=True) if is_ddp else None
 	train_dl = DataLoader(
 		train_ds,
@@ -68,7 +70,9 @@ def main(cfg: DictConfig):
 		pin_memory=True,
 	)
 
-	val_ds = WikiTextDataset(tokenizer=tokenizer, max_length=cfg.model.max_length, split="validation", data_path=cfg.dataset.path)
+	val_ds = WikiTextDataset(
+		tokenizer=tokenizer, max_length=cfg.model.max_length, split="validation", data_path=cfg.dataset.path
+	)
 	val_sampler = DistributedSampler(val_ds, num_replicas=world_size, rank=rank, shuffle=False) if is_ddp else None
 	val_dl = DataLoader(
 		val_ds,

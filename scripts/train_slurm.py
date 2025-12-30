@@ -93,7 +93,6 @@ def main():
 	if args.job_name is None:
 		args.job_name = f"train-{args.model_config}"
 
-
 	hydra_args_str = " ".join(hydra_args)
 
 	slurm_script_content = SLURM_SCRIPT_TEMPLATE.format(

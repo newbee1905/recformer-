@@ -172,7 +172,7 @@ class DisentangledSelfAttention(nn.Module):
 			q = self.q_norm(q)
 			k = self.k_norm(k)
 
-		# Relative Position Handling 
+		# Relative Position Handling
 		rel_pos_indices = torch.arange(seq_len, device=hidden_states.device)
 		rel_pos_mat = rel_pos_indices.unsqueeze(1) - rel_pos_indices.unsqueeze(0)
 		rel_pos_mat += self.max_relative_positions

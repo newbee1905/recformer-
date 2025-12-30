@@ -1,6 +1,8 @@
 import torch.nn as nn
 import torch.nn.functional as F
-from kernel.swiglu import TritonSwiGLUFunction
+
+# Lazy load Triton kernel
+TritonSwiGLUFunction = None
 
 
 class FeedForward(nn.Module):
@@ -11,6 +13,19 @@ class FeedForward(nn.Module):
 
 	def __init__(self, config):
 		super().__init__()
+		global TritonSwiGLUFunction
+		if TritonSwiGLUFunction is None:
+			try:
+				from kernel.swiglu import TritonSwiGLUFunction as _TritonSwiGLUFunction
+
+				TritonSwiGLUFunction = _TritonSwiGLUFunction
+			except ImportError:
+				# This is checked below, so we can pass here.
+				pass
+
+		if TritonSwiGLUFunction is None:
+			raise ImportError("Triton is not available. Set `use_liger_ff=False` to use torch FFN.")
+
 		d_model = config.d_model
 		intermediate_size = int(d_model * config.ffn_multiplier)
 

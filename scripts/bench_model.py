@@ -49,7 +49,7 @@ def run_benchmark(cfg: DictConfig):
 		tokenizer=tokenizer,
 		max_length=cfg.model.block_size,
 		split="train",
-                data_path=cfg.dataset.path,
+		data_path=cfg.dataset.path,
 	)
 
 	train_dl = DataLoader(

@@ -31,18 +31,26 @@ class RMSNormTorch(nn.Module):
 		return output.type_as(x)
 
 
-from kernel.rms_norm import TritonRMSNorm
+_TritonRMSNorm = None
 
 
 def get_norm_class(config):
 	"""
 	Returns the appropriate RMSNorm class based on the configuration.
 	"""
+	global _TritonRMSNorm
 	use_triton = getattr(config, "use_liger_norm", False)
 	if use_triton:
+		if _TritonRMSNorm is None:
+			try:
+				from kernel.rms_norm import TritonRMSNorm as _TritonRMSNorm_
+
+				_TritonRMSNorm = _TritonRMSNorm_
+			except ImportError:
+				raise ImportError("Triton is not available. Set `use_liger_norm=False` to use torch RMSNorm.")
 		# The TritonRMSNorm is hardcoded for Gemma-style normalization
 		# with a unit offset, which is compatible.
-		return TritonRMSNorm
+		return _TritonRMSNorm
 	else:
 		# RMSNormTorch requires the `dim` argument.
 		# We can return a lambda to make the signature compatible or
