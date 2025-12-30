@@ -10,14 +10,9 @@ SLURM_SCRIPT_TEMPLATE = """#!/bin/bash
 #SBATCH --job-name={job_name}
 #SBATCH --account={account}
 #SBATCH --partition={partition}
-#SBATCH --gpus-per-node={num_gpus}
-#SBATCH --nodes={num_nodes}
-#SBATCH --ntasks-per-node=1
-#SBATCH --cpus-per-task=18
-#SBATCH --time={time}
-#SBATCH --mem={mem}
-#SBATCH --output=%x.%j.out
-#SBATCH --error=%x.%j.err
+#SBATCH --cpus-per-task=8
+#SBATCH --output=logs/%x.%j.out
+#SBATCH --error=logs/%x.%j.err
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user={mail_user}
 
@@ -26,28 +21,10 @@ set -euo pipefail
 # --- Environment Setup ---
 echo "Loading modules..."
 
-# Note: This line is cluster-specific. Adjust if necessary.
-module load NVHPC/24.9-CUDA-12.6.0
-module load Anaconda3/2024.02
-
-eval \"$(conda shell.bash hook)\" 
-
-conda activate rust_build_env
-
-export LIBCLANG_PATH="$CONDA_PREFIX/lib"
-export LD_LIBRARY_PATH="$CONDA_PREFIX/lib:$LD_LIBRARY_PATH"
-
-echo "Build Env Ready."
-echo "Rustc path: $(which rustc)"
-echo "Clang path: $(which clang)"
-echo "Libclang path: $LIBCLANG_PATH"
-
-unset CONDA_PREFIX
-
-echo "Activating virtual environment..."
+module load cuda/11.8.0
 source .venv/bin/activate
 
-export PYTHONPATH=$PYTHONPATH:.
+export PYTHONPATH=.
 
 # --- DDP Setup ---
 export MASTER_ADDR=$(scontrol show hostname $SLURM_JOB_NODELIST | head -n 1)
@@ -97,11 +74,7 @@ def main():
 	slurm_group.add_argument("--account", type=str, default="matsim_acc23", help="SLURM account to use.")
 	slurm_group.add_argument("--partition", type=str, default="gpu", help="SLURM partition to use.")
 	slurm_group.add_argument("--num_nodes", type=int, default=1, help="Number of nodes to request.")
-	slurm_group.add_argument("--time", type=str, default="1-00:00:00", help="Job time limit (e.g., '1-00:00:00').")
-	slurm_group.add_argument("--mem", type=str, default="64G", help="Memory per node (e.g., '64G').")
-	slurm_group.add_argument(
-		"--job_name", type=str, default="GrokMaterial", help="Job name. Defaults to 'GrokMaterial'."
-	)
+	slurm_group.add_argument("--job_name", type=str, default=None, help="Job name. Defaults to 'train-<model_config>'.")
 	slurm_group.add_argument("--mail_user", type=str, default="your_email@example.com", help="Email for notifications.")
 
 	# Script behavior arguments
@@ -117,6 +90,10 @@ def main():
 	if hydra_args and hydra_args[0] == "--":
 		hydra_args = hydra_args[1:]
 
+	if args.job_name is None:
+		args.job_name = f"train-{args.model_config}"
+
+
 	hydra_args_str = " ".join(hydra_args)
 
 	slurm_script_content = SLURM_SCRIPT_TEMPLATE.format(
@@ -125,8 +102,6 @@ def main():
 		account=args.account,
 		partition=args.partition,
 		num_nodes=args.num_nodes,
-		time=args.time,
-		mem=args.mem,
 		job_name=args.job_name,
 		mail_user=args.mail_user,
 		hydra_args_str=hydra_args_str,

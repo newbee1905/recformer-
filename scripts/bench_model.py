@@ -41,13 +41,15 @@ def run_benchmark(cfg: DictConfig):
 	dtype = getattr(torch, cfg.training.get("dtype", "bfloat16"))
 	use_amp = (dtype == torch.float16) and ("cuda" in device.type)
 
-	tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
+	tokenizer_path = cfg.model.get("tokenizer_path", "gpt2")
+	tokenizer = GPT2Tokenizer.from_pretrained(tokenizer_path)
 	tokenizer.pad_token = tokenizer.eos_token
 
 	train_ds = WikiTextDataset(
 		tokenizer=tokenizer,
 		max_length=cfg.model.block_size,
 		split="train",
+                data_path=cfg.dataset.path,
 	)
 
 	train_dl = DataLoader(

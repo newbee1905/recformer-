@@ -14,7 +14,7 @@ from dataset.wikitext import WikiTextDataset
 
 
 def setup():
-	if "WORLD_SIZE" in os.environ:
+	if "WORLD_SIZE" in os.environ and int(os.environ["WORLD_SIZE"]) > 1:
 		dist.init_process_group(backend="nccl")
 		rank = int(os.environ["RANK"])
 		local_rank = int(os.environ["LOCAL_RANK"])
@@ -51,12 +51,13 @@ def main(cfg: DictConfig):
 		print(f"Hydra configuration:\n{OmegaConf.to_yaml(cfg)}")
 		print(f"Running on device: {device}")
 
-	tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
+	tokenizer_path = cfg.model.get("tokenizer_path", "gpt2")
+	tokenizer = GPT2Tokenizer.from_pretrained(tokenizer_path)
 	tokenizer.pad_token = tokenizer.eos_token
 	if rank == 0:
 		print(f"Tokenizer loaded with {tokenizer.vocab_size} tokens.")
 
-	train_ds = WikiTextDataset(tokenizer=tokenizer, max_length=cfg.model.max_length, split="train")
+	train_ds = WikiTextDataset(tokenizer=tokenizer, max_length=cfg.model.max_length, split="train", data_path=cfg.dataset.path)
 	train_sampler = DistributedSampler(train_ds, num_replicas=world_size, rank=rank, shuffle=True) if is_ddp else None
 	train_dl = DataLoader(
 		train_ds,
@@ -67,7 +68,7 @@ def main(cfg: DictConfig):
 		pin_memory=True,
 	)
 
-	val_ds = WikiTextDataset(tokenizer=tokenizer, max_length=cfg.model.max_length, split="validation")
+	val_ds = WikiTextDataset(tokenizer=tokenizer, max_length=cfg.model.max_length, split="validation", data_path=cfg.dataset.path)
 	val_sampler = DistributedSampler(val_ds, num_replicas=world_size, rank=rank, shuffle=False) if is_ddp else None
 	val_dl = DataLoader(
 		val_ds,
