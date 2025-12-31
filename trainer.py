@@ -333,6 +333,8 @@ class Trainer:
 			dist.all_reduce(epoch_loss, op=dist.ReduceOp.AVG)
 			dist.all_reduce(epoch_gen_loss, op=dist.ReduceOp.AVG)
 
+		valid_ppl = torch.exp(epoch_loss)
+
 		# Aggregate accuracy stats
 		total_tokens = torch.tensor(total_tokens, device=self.device)
 		correct_tokens = torch.tensor(correct_tokens, device=self.device)
@@ -352,6 +354,7 @@ class Trainer:
 			epoch_gen_loss.item(),
 			token_accuracy.item(),
 			exact_accuracy.item(),
+			valid_ppl.item(),
 		)
 
 	def train(self):
@@ -372,6 +375,7 @@ class Trainer:
 					val_gen_loss,
 					val_token_acc,
 					val_exact_acc,
+					val_ppl,
 				) = self._evaluate(self.val_loader)
 
 				if self.is_main_process:
@@ -380,6 +384,7 @@ class Trainer:
 					metrics_dict["val_loss"] = f"{val_loss:.4f}"
 					metrics_dict["val_token_acc"] = f"{val_token_acc:.4f}"
 					metrics_dict["val_exact_acc"] = f"{val_exact_acc:.4f}"
+					metrics_dict["val_ppl"] = f"{val_ppl:.2f}"
 
 					log_data = {
 						"Loss/train": train_loss,
@@ -389,6 +394,7 @@ class Trainer:
 						"Accuracy/token_train": train_token_acc,
 						"Accuracy/token_val": val_token_acc,
 						"Accuracy/exact_val": val_exact_acc,
+						"Perplexity/val": val_ppl,
 						"lr": self.optimizer.param_groups[0]["lr"],
 					}
 
