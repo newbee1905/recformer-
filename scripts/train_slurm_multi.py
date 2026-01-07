@@ -31,10 +31,12 @@ export MASTER_ADDR=$(scontrol show hostname $SLURM_JOB_NODELIST | head -n 1)
 export MASTER_PORT=$(shuf -i 29500-65535 -n 1)
 GPUS_PER_NODE={num_gpus}
 
-# --- Job Execution ---
+# --- Job Info & Execution ---
+OUTPUT_DIR="outputs/${{SLURM_JOB_NAME}}/${{SLURM_JOB_ID}}"
 echo "--- Job Info ---"
 echo "Starting SLURM job $SLURM_JOB_ID on $(hostname)"
 echo "Model Config: {model_config}"
+echo "Output Dir: $OUTPUT_DIR"
 echo "Master Node: $MASTER_ADDR, Port: $MASTER_PORT"
 echo "GPUs per node: $GPUS_PER_NODE"
 echo "Nodes: {num_nodes}"
@@ -42,13 +44,26 @@ echo "Hydra args: {hydra_args_str}"
 echo "----------------"
 nvidia-smi
 
+# --- Training ---
+echo "Starting training run..."
 srun torchrun \
 	--nproc_per_node=$GPUS_PER_NODE \
 	--nnodes=$SLURM_NNODES \
 	--rdzv_id=$SLURM_JOB_ID \
 	--rdzv_backend=c10d \
 	--rdzv_endpoint=$MASTER_ADDR:$MASTER_PORT \
-	main.py model={model_config} {hydra_args_str}
+	main.py model={model_config} hydra.run.dir=$OUTPUT_DIR {hydra_args_str}
+echo "Training finished."
+
+# --- Evaluation ---
+if [ "{run_eval}" = "True" ]; then
+    echo "Starting evaluation..."
+    # We only need to run this on a single process, not with srun/torchrun
+    if [ "$SLURM_PROCID" -eq 0 ]; then
+        python scripts/lm_eval.py checkpoint_dir=$OUTPUT_DIR
+    fi
+    echo "Evaluation finished."
+fi
 
 echo "SLURM job $SLURM_JOB_ID finished."
 """
@@ -87,6 +102,13 @@ def main():
 		action="store_true",
 		help="Print the generated scripts to stdout instead of submitting them to sbatch.",
 	)
+	action_group.add_argument(
+		"--no-eval",
+		action="store_false",
+		dest="run_eval",
+		help="Do not run lm-eval-harness after training. Evaluation runs by default.",
+	)
+	parser.set_defaults(run_eval=True)
 
 	# All arguments after '--' will be treated as hydra arguments
 	args, hydra_args = parser.parse_known_args()
@@ -107,6 +129,7 @@ def main():
 			job_name=job_name,
 			mail_user=args.mail_user,
 			hydra_args_str=hydra_args_str,
+			run_eval=args.run_eval,
 		)
 
 		if args.dry_run:
