@@ -13,13 +13,13 @@ wandb:
 
 model:
   max_length: ${model.block_size}
-  tokenizer_path: "${hydra:runtime.cwd}/offline_cache/gpt2_tokenizer"
+  tokenizer_path: "${hydra:runtime.cwd}/fineweb-edu-tokenizer-vocab-16384"
 
 dataset:
-  path: "${hydra:runtime.cwd}/offline_cache/wikitext-2"
+  path: "${hydra:runtime.cwd}/offline_cache/fineweb-edu"
 
 training:
-  batch_size: 64
+  batch_size: 32
   num_workers: 8
   epochs: 30
   optimizer:
@@ -27,8 +27,8 @@ training:
     weight_decay: 0.01
   logger: "tensorboard" # "tensorboard" or "wandb"
   compile: false
-  dtype: "float16" # or "float16" or "float32"
-  grad_accum_steps: 1
+  dtype: "bfloat16" # or "float16" or "float32"
+  grad_accum_steps: 2
   grad_clip: 1.0
   early_stopping_patience: 3
   softcap:

@@ -1,15 +1,13 @@
-name: recurrent-small
-block_size: 256
+name: recurrent_2l_4r_768d_rmsnorm
+block_size: 1024
 num_recurrences: 4
-n_layer: 6
-n_head: 4
-d_model: 256
+n_layer: 2
+n_head: 12
+d_model: 768
 dropout: 0.1
 use_kv_cache: false
 use_gate: false
-use_qk_norm: true
-qk_norm:
-  type: soft_hyperball_norm # rms or soft_hyperball_norm
+use_qk_norm: false
 ffn_multiplier: 4.0
 rope_theta: 10000.0
 layer_scale_init: 0.0001

@@ -24,6 +24,10 @@ dependencies = [
     "transformers>=4.57.3",
     "torchvision>=0.22.1",
     "pyarrow>=22.0.0",
+    "matplotlib>=3.10.8",
+    "seaborn>=0.13.2",
+    "tqdm>=4.66.5",
+    "rustbpe>=0.1.0",
 ]
 
 [tool.ruff]
@@ -32,9 +36,12 @@ line-length = 120
 [tool.ruff.format]
 indent-style = "tab"
 
+[tool.setuptools.packages.find]
+include = ["dataset", "kernel", "model"]
+
 [tool.pytest.ini_options]
 addopts = ["-m", "not benchmark"]
 markers = ["benchmark: marks tests as benchmarks (deselect with '-m \"not benchmark\"')"]
 
-[[tool.uv.index]]
-url = "https://download.pytorch.org/whl/cu118"
+# [[tool.uv.index]]
+# url = "https://download.pytorch.org/whl/cu118"

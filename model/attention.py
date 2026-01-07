@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from .utils import apply_rope, apply_rope_torch
-from .norm import get_norm_class
+from .norm import get_norm_class, get_qknorm_class
 
 
 class MHA(nn.Module):
@@ -36,13 +36,10 @@ class MHA(nn.Module):
 		self.c_proj = nn.Linear(config.d_model, config.d_model, bias=False)
 		self.resid_dropout = nn.Dropout(config.dropout)
 
-		if self.use_gate:
-			self.g_gate = nn.Linear(config.d_model, config.d_model, bias=False)
-
 		if self.use_qk_norm:
-			RMSNorm = get_norm_class(config)
-			self.q_norm = RMSNorm(self.d_head)
-			self.k_norm = RMSNorm(self.d_head)
+			norm_class, norm_kwargs = get_qknorm_class(config)
+			self.q_norm = norm_class(self.d_head, **norm_kwargs)
+			self.k_norm = norm_class(self.d_head, **norm_kwargs)
 
 	def forward(
 		self,
@@ -132,9 +129,9 @@ class DisentangledSelfAttention(nn.Module):
 		self.resid_dropout = nn.Dropout(config.dropout)
 
 		if self.use_qk_norm:
-			RMSNorm = get_norm_class(config)
-			self.q_norm = RMSNorm(self.d_head)
-			self.k_norm = RMSNorm(self.d_head)
+			norm_class, norm_kwargs = get_qknorm_class(config)
+			self.q_norm = norm_class(self.d_head, **norm_kwargs)
+			self.k_norm = norm_class(self.d_head, **norm_kwargs)
 
 		# Relative position embeddings
 		self.max_relative_positions = getattr(config, "max_relative_positions", 512)

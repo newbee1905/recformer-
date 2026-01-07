@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import math
 
 
 # RMSNorm from gemma
@@ -29,6 +30,36 @@ class RMSNormTorch(nn.Module):
 		else:
 			output = output * self.weight.float()
 		return output.type_as(x)
+
+
+class SoftHyperballNorm(nn.Module):
+	def __init__(self, dim: int, c: float = None):  # Default c to None
+		super().__init__()
+		self.dim = dim  # Store dim
+		self.c = c if c is not None else math.sqrt(dim)  # Calculate if None
+
+	def forward(self, x):
+		"""Algebraic (Slope-1) -> Projects to Soft Hyperball (Solid)."""
+		vector_norm = x.norm(p=2, dim=-1, keepdim=True)
+		scale = torch.rsqrt(1 + (vector_norm / self.c).pow(2))
+		return x * scale
+
+
+def get_qknorm_class(config):
+	"""
+	Returns the appropriate QKNorm class and its config based on the configuration.
+	"""
+	if not hasattr(config, "qk_norm") or not hasattr(config.qk_norm, "type"):
+		raise ValueError("Configuration for 'use_qk_norm: true' requires a 'qk_norm' block with a 'type'.")
+
+	norm_type = config.qk_norm.type
+	if norm_type == "rms":
+		return RMSNormTorch, {}
+	elif norm_type == "soft_hyperball_norm":
+		c_val = config.qk_norm.get("c", None)
+		return SoftHyperballNorm, {"c": c_val}
+	else:
+		raise ValueError(f"Unknown QK norm type: {norm_type}")
 
 
 _TritonRMSNorm = None
