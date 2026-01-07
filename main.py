@@ -8,9 +8,9 @@ from torch.utils.data import DataLoader
 from torch.utils.data.distributed import DistributedSampler
 
 from model.recurrent_decoder import RecurrentDecoder
-from transformers import GPT2Tokenizer
+from transformers import AutoTokenizer
 from trainer import Trainer
-from dataset.wikitext import WikiTextDataset
+from dataset.fineweb import FineWebEduDataset 
 
 
 def setup():
@@ -52,13 +52,28 @@ def main(cfg: DictConfig):
 		print(f"Running on device: {device}")
 
 	tokenizer_path = cfg.model.get("tokenizer_path", "gpt2")
-	tokenizer = GPT2Tokenizer.from_pretrained(tokenizer_path)
-	tokenizer.pad_token = tokenizer.eos_token
-	if rank == 0:
-		print(f"Tokenizer loaded with {tokenizer.vocab_size} tokens.")
 
-	train_ds = WikiTextDataset(
-		tokenizer=tokenizer, max_length=cfg.model.max_length, split="train", data_path=cfg.dataset.path
+	# Load tokenizer just to get vocab_size and pad_token_id
+	temp_tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
+	temp_tokenizer.pad_token = temp_tokenizer.eos_token
+
+	initial_vocab_size = temp_tokenizer.vocab_size
+	pad_token_id = temp_tokenizer.pad_token_id
+
+	# Adjust vocab_size to be divisible by 128
+	adjusted_vocab_size = (initial_vocab_size + 127) // 128 * 128
+	if rank == 0:
+		print(f"Initial tokenizer vocab size: {initial_vocab_size}")
+		print(f"Adjusted vocab size (divisible by 128): {adjusted_vocab_size}")
+
+	if rank == 0:
+		print(f"Tokenizer loaded with {initial_vocab_size} tokens. Adjusted to {adjusted_vocab_size} for model embedding.")
+
+	train_ds = FineWebEduDataset( 
+		tokenizer_path=tokenizer_path,
+		max_length=cfg.model.max_length,
+		split="train",
+		data_path=cfg.dataset.path
 	)
 	train_sampler = DistributedSampler(train_ds, num_replicas=world_size, rank=rank, shuffle=True) if is_ddp else None
 	train_dl = DataLoader(
@@ -70,8 +85,11 @@ def main(cfg: DictConfig):
 		pin_memory=True,
 	)
 
-	val_ds = WikiTextDataset(
-		tokenizer=tokenizer, max_length=cfg.model.max_length, split="validation", data_path=cfg.dataset.path
+	val_ds = FineWebEduDataset(
+		tokenizer_path=tokenizer_path,
+		max_length=cfg.model.max_length,
+		split="validation", 
+		data_path=cfg.dataset.path
 	)
 	val_sampler = DistributedSampler(val_ds, num_replicas=world_size, rank=rank, shuffle=False) if is_ddp else None
 	val_dl = DataLoader(
@@ -84,8 +102,8 @@ def main(cfg: DictConfig):
 	)
 
 	OmegaConf.set_struct(cfg, False)
-	cfg.model.vocab_size = tokenizer.vocab_size
-	cfg.model.pad_token_id = tokenizer.pad_token_id
+	cfg.model.vocab_size = adjusted_vocab_size # Use adjusted vocab size
+	cfg.model.pad_token_id = pad_token_id # Use obtained pad_token_id
 	OmegaConf.set_struct(cfg, True)
 
 	model = RecurrentDecoder(cfg.model).to(device)
