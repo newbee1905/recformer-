@@ -28,6 +28,7 @@ dependencies = [
     "seaborn>=0.13.2",
     "tqdm>=4.66.5",
     "rustbpe>=0.1.0",
+    "lm-eval>=0.4.9.2",
 ]
 
 [tool.ruff]

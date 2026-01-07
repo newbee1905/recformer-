@@ -10,7 +10,7 @@ from torch.utils.data.distributed import DistributedSampler
 from model.recurrent_decoder import RecurrentDecoder
 from transformers import AutoTokenizer
 from trainer import Trainer
-from dataset.fineweb import FineWebEduDataset 
+from dataset.fineweb import FineWebEduDataset
 
 
 def setup():
@@ -67,13 +67,12 @@ def main(cfg: DictConfig):
 		print(f"Adjusted vocab size (divisible by 128): {adjusted_vocab_size}")
 
 	if rank == 0:
-		print(f"Tokenizer loaded with {initial_vocab_size} tokens. Adjusted to {adjusted_vocab_size} for model embedding.")
+		print(
+			f"Tokenizer loaded with {initial_vocab_size} tokens. Adjusted to {adjusted_vocab_size} for model embedding."
+		)
 
-	train_ds = FineWebEduDataset( 
-		tokenizer_path=tokenizer_path,
-		max_length=cfg.model.max_length,
-		split="train",
-		data_path=cfg.dataset.path
+	train_ds = FineWebEduDataset(
+		tokenizer_path=tokenizer_path, max_length=cfg.model.max_length, split="train", data_path=cfg.dataset.path
 	)
 	train_sampler = DistributedSampler(train_ds, num_replicas=world_size, rank=rank, shuffle=True) if is_ddp else None
 	train_dl = DataLoader(
@@ -85,25 +84,9 @@ def main(cfg: DictConfig):
 		pin_memory=True,
 	)
 
-	val_ds = FineWebEduDataset(
-		tokenizer_path=tokenizer_path,
-		max_length=cfg.model.max_length,
-		split="validation", 
-		data_path=cfg.dataset.path
-	)
-	val_sampler = DistributedSampler(val_ds, num_replicas=world_size, rank=rank, shuffle=False) if is_ddp else None
-	val_dl = DataLoader(
-		val_ds,
-		batch_size=cfg.training.batch_size,
-		sampler=val_sampler,
-		shuffle=False,
-		num_workers=cfg.training.num_workers,
-		pin_memory=True,
-	)
-
 	OmegaConf.set_struct(cfg, False)
-	cfg.model.vocab_size = adjusted_vocab_size # Use adjusted vocab size
-	cfg.model.pad_token_id = pad_token_id # Use obtained pad_token_id
+	cfg.model.vocab_size = adjusted_vocab_size
+	cfg.model.pad_token_id = pad_token_id
 	OmegaConf.set_struct(cfg, True)
 
 	model = RecurrentDecoder(cfg.model).to(device)
@@ -114,12 +97,11 @@ def main(cfg: DictConfig):
 		cfg=cfg,
 		model=model,
 		train_loader=train_dl,
-		val_loader=val_dl,
+		val_loader=None,
 		device=device,
 		rank=rank,
 		world_size=world_size,
 	)
-
 	trainer.train()
 	cleanup_ddp()
 

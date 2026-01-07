@@ -21,7 +21,7 @@ dataset:
 training:
   batch_size: 32
   num_workers: 8
-  epochs: 30
+  epochs: 1
   optimizer:
     lr: 0.0001
     weight_decay: 0.01
