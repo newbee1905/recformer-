@@ -54,11 +54,19 @@ def main(cfg: DictConfig):
 	tokenizer_path = cfg.model.get("tokenizer_path", "gpt2")
 
 	# Load tokenizer just to get vocab_size and pad_token_id
-	temp_tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
-	temp_tokenizer.pad_token = temp_tokenizer.eos_token
+	tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
 
-	initial_vocab_size = temp_tokenizer.vocab_size
-	pad_token_id = temp_tokenizer.pad_token_id
+	if tokenizer.pad_token is None:
+		if tokenizer.eos_token is not None:
+			if rank == 0:
+				print(f"Warning: No pad_token found in config. Using eos_token ({tokenizer.eos_token}) as pad_token.")
+			tokenizer.pad_token = tokenizer.eos_token
+		else:
+			# Fallback for models with neither (rare, but prevents crash)
+			tokenizer.add_special_tokens({"pad_token": "<pad>"})
+
+	initial_vocab_size = tokenizer.vocab_size
+	pad_token_id = tokenizer.pad_token_id
 
 	# Adjust vocab_size to be divisible by 128
 	adjusted_vocab_size = (initial_vocab_size + 127) // 128 * 128

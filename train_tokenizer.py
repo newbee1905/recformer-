@@ -1,5 +1,6 @@
 from datasets import load_dataset
 from tokenizers import ByteLevelBPETokenizer
+from transformers import PreTrainedTokenizerFast
 import os
 import argparse
 
@@ -33,19 +34,23 @@ def train_tokenizer(vocab_size):
 		],
 	)
 
+	fast_tokenizer = PreTrainedTokenizerFast(
+		tokenizer_object=tokenizer,
+		model_max_length=1024,
+		bos_token="<s>",
+		eos_token="</s>",
+		unk_token="<unk>",
+		pad_token="<pad>",
+		mask_token="<mask>",
+	)
+
 	# Save files
 	tokenizer_dir = f"fineweb-edu-tokenizer-vocab-{vocab_size}"
 	if not os.path.exists(tokenizer_dir):
 		os.makedirs(tokenizer_dir)
 	print(f"Saving tokenizer to {tokenizer_dir}")
-	tokenizer.save_model(tokenizer_dir)
+	fast_tokenizer.save_pretrained(tokenizer_dir)
 
-	# Create a config.json for compatibility with AutoTokenizer
-	config_path = os.path.join(tokenizer_dir, "config.json")
-	with open(config_path, "w") as f:
-		import json
-		json.dump({"model_type": "gpt2"}, f)
-		
 	print("Tokenizer training complete.")
 
 
