@@ -42,7 +42,21 @@ echo "GPUs per node: $GPUS_PER_NODE"
 echo "Nodes: {num_nodes}"
 echo "Hydra args: {hydra_args_str}"
 echo "----------------"
-nvidia-smi
+
+# --- GPU Monitoring Setup ---
+mkdir -p ${{OUTPUT_DIR}}
+GPU_LOG="${{OUTPUT_DIR}}/gpu_monitoring.csv"
+echo "timestamp, gpu_util, mem_used, mem_total" > "$GPU_LOG" # Create header once
+
+(
+    while true; do
+        # Queries timestamp, utilization, and memory usage in CSV format
+        nvidia-smi --query-gpu=timestamp,utilization.gpu,memory.used,memory.total \
+            --format=csv,noheader,nounits >> "$GPU_LOG"
+        sleep 15
+    done
+) &
+MONITOR_PID=$!
 
 # --- Training ---
 echo "Starting training run..."
@@ -54,6 +68,10 @@ srun torchrun \
 	--rdzv_endpoint=$MASTER_ADDR:$MASTER_PORT \
 	main.py model={model_config} hydra.run.dir=$OUTPUT_DIR {hydra_args_str}
 echo "Training finished."
+
+# --- Kill Monitoring ---
+echo "Stopping GPU monitoring (PID: $MONITOR_PID)..."
+kill $MONITOR_PID
 
 # --- Evaluation ---
 if [ "{run_eval}" = "True" ]; then
